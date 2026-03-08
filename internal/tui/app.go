@@ -212,14 +212,19 @@ func (a App) renderPanel() string {
 }
 
 func (a App) renderStatusBar() string {
-	status := fmt.Sprintf(" %s ", a.activeTab.String())
-	help := " spc:play/pause n:next p:prev ?:help "
-	// If terminal is too narrow, show minimal help.
-	if a.width < lipgloss.Width(status)+lipgloss.Width(help) {
-		help = " ?:help "
+	status := fmt.Sprintf(" %s", a.activeTab.String())
+	help := "spc:play/pause n:next p:prev ?:help "
+	available := a.width - lipgloss.Width(status)
+	if available < lipgloss.Width(help) {
+		help = "?:help "
 	}
-	gap := strings.Repeat(" ", max(0, a.width-lipgloss.Width(status)-lipgloss.Width(help)))
-	return a.theme.StatusBar.Width(a.width).Render(status + gap + help)
+	gap := max(0, a.width-lipgloss.Width(status)-lipgloss.Width(help))
+	line := status + strings.Repeat(" ", gap) + help
+	// Truncate to terminal width to prevent wrapping.
+	if lipgloss.Width(line) > a.width {
+		line = line[:a.width]
+	}
+	return a.theme.StatusBar.Render(line)
 }
 
 func (a App) renderHelp() string {
