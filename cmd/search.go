@@ -52,7 +52,7 @@ var searchCmd = &cobra.Command{
 		if len(result.Playlists.Items) > 0 {
 			fmt.Println("📋 Playlists:")
 			for i, p := range result.Playlists.Items {
-				fmt.Printf("  %d. %s (%d tracks)\n", i+1, p.Name, p.Tracks.Total)
+				fmt.Printf("  %d. %s (%d tracks)\n", i+1, p.Name, p.TrackCount())
 			}
 		}
 

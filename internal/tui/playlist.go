@@ -191,7 +191,7 @@ func (m PlaylistModel) renderPlaylists() string {
 	visible := m.visibleRange(len(m.playlists))
 	for i := visible.start; i < visible.end; i++ {
 		p := m.playlists[i]
-		label := fmt.Sprintf("%s (%d tracks)", p.Name, p.Tracks.Total)
+		label := fmt.Sprintf("%s (%d tracks)", p.Name, p.TrackCount())
 		if i == m.cursor {
 			lines += m.theme.SelectedItem.Render("▸ "+label) + "\n"
 		} else {

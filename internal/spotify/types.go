@@ -67,6 +67,23 @@ type Playlist struct {
 	Tracks      struct {
 		Total int `json:"total"`
 	} `json:"tracks"`
+	// Items mirrors the track count — the /me/playlists endpoint
+	// returns the count under "items" instead of "tracks".
+	Items *struct {
+		Total int `json:"total"`
+	} `json:"items,omitempty"`
+}
+
+// TrackCount returns the total number of tracks in the playlist,
+// checking both the "tracks" and "items" response fields.
+func (p Playlist) TrackCount() int {
+	if p.Tracks.Total > 0 {
+		return p.Tracks.Total
+	}
+	if p.Items != nil {
+		return p.Items.Total
+	}
+	return 0
 }
 
 // PlaylistsResponse wraps the playlists list response.

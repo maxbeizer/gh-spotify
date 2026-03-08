@@ -247,7 +247,7 @@ func flattenResults(r *spotify.SearchResult) []searchResultItem {
 		items = append(items, searchResultItem{category: fmt.Sprintf("Playlists (%d)", r.Playlists.Total)})
 		for _, p := range r.Playlists.Items {
 			items = append(items, searchResultItem{
-				label:    fmt.Sprintf("%s (%d tracks)", p.Name, p.Tracks.Total),
+				label:    fmt.Sprintf("%s (%d tracks)", p.Name, p.TrackCount()),
 				category: "Playlists",
 				uri:      p.URI,
 			})

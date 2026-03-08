@@ -28,7 +28,7 @@ var playlistCmd = &cobra.Command{
 
 		fmt.Println("📋 Your Playlists:")
 		for i, p := range resp.Items {
-			fmt.Printf("  %d. %s (%d tracks)\n", i+1, p.Name, p.Tracks.Total)
+			fmt.Printf("  %d. %s (%d tracks)\n", i+1, p.Name, p.TrackCount())
 		}
 		return nil
 	},
