@@ -14,29 +14,43 @@ func (c *Client) GetPlaylists(limit, offset int) (*PlaylistsResponse, error) {
 	return &resp, nil
 }
 
-// PlaylistDetailResponse wraps the full playlist response from /playlists/{id}.
-type PlaylistDetailResponse struct {
-	Name   string `json:"name"`
-	Tracks struct {
+// playlistDetailResponse wraps the full playlist response from /playlists/{id}.
+// The Spotify API returns tracks under "items" (not "tracks"), and each
+// track entry uses "item" (not "track") for the track object.
+type playlistDetailResponse struct {
+	Name  string `json:"name"`
+	Items struct {
 		Items []struct {
 			Track Track `json:"track"`
+			Item  Track `json:"item"`
 		} `json:"items"`
 		Total int `json:"total"`
-	} `json:"tracks"`
+	} `json:"items"`
 }
 
 // GetPlaylistTracks returns tracks in a playlist.
 func (c *Client) GetPlaylistTracks(playlistID string, limit, offset int) (*PlaylistTracksResponse, error) {
 	// Use the full playlist endpoint — the /tracks sub-endpoint requires
 	// additional scopes that may not be granted.
-	var detail PlaylistDetailResponse
+	var detail playlistDetailResponse
 	if err := c.Get(fmt.Sprintf("/playlists/%s", playlistID), &detail); err != nil {
 		return nil, err
 	}
-	return &PlaylistTracksResponse{
-		Items: detail.Tracks.Items,
-		Total: detail.Tracks.Total,
-	}, nil
+
+	// Map to PlaylistTracksResponse, handling both "track" and "item" keys.
+	result := &PlaylistTracksResponse{Total: detail.Items.Total}
+	for _, entry := range detail.Items.Items {
+		t := entry.Track
+		if t.ID == "" {
+			t = entry.Item
+		}
+		if t.ID != "" {
+			result.Items = append(result.Items, struct {
+				Track Track `json:"track"`
+			}{Track: t})
+		}
+	}
+	return result, nil
 }
 
 // PlayPlaylist starts playback of a playlist.
