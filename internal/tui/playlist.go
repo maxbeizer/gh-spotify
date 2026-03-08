@@ -127,6 +127,16 @@ func (m PlaylistModel) Update(msg tea.Msg) (PlaylistModel, tea.Cmd) {
 				m.cursor = 0
 				return m, m.loadTracks(m.selected.ID)
 			}
+			if m.view == playlistViewTracks && m.cursor < len(m.tracks) {
+				track := m.tracks[m.cursor]
+				return m, func() tea.Msg {
+					err := m.client.AddToQueue(track.URI)
+					if err == nil {
+						m.client.Play()
+					}
+					return controlActionMsg{feedback: "▶ " + track.Name, err: err}
+				}
+			}
 		case "esc":
 			if m.view == playlistViewTracks {
 				m.view = playlistViewList

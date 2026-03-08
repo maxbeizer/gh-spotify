@@ -119,19 +119,23 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	// Route to the active panel's sub-model.
-	switch a.activeTab {
-	case TabPlaylists:
+	// Always route non-key messages to all panels (so async data loads land).
+	// Only route key messages to the active panel.
+	_, isKey := msg.(tea.KeyMsg)
+
+	if !isKey || a.activeTab == TabPlaylists {
 		a.panels.Playlists, cmd = a.panels.Playlists.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-	case TabSearch:
+	}
+	if !isKey || a.activeTab == TabSearch {
 		a.panels.Search, cmd = a.panels.Search.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-	case TabDevices:
+	}
+	if !isKey || a.activeTab == TabDevices {
 		a.panels.Devices, cmd = a.panels.Devices.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
@@ -209,10 +213,10 @@ func (a App) renderPanel() string {
 
 func (a App) renderStatusBar() string {
 	status := fmt.Sprintf(" %s ", a.activeTab.String())
-	help := " spc ▶⏸ · n ⏭ · p ⏮ · ? help "
+	help := " spc:play/pause n:next p:prev ?:help "
 	// If terminal is too narrow, show minimal help.
 	if a.width < lipgloss.Width(status)+lipgloss.Width(help) {
-		help = " ? help "
+		help = " ?:help "
 	}
 	gap := strings.Repeat(" ", max(0, a.width-lipgloss.Width(status)-lipgloss.Width(help)))
 	return a.theme.StatusBar.Width(a.width).Render(status + gap + help)

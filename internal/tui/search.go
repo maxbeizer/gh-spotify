@@ -19,6 +19,7 @@ type searchResultsMsg struct {
 type searchResultItem struct {
 	label    string
 	category string // "Tracks", "Artists", "Albums", "Playlists"
+	uri      string // Spotify URI for playable items
 }
 
 // SearchModel is the search panel.
@@ -129,6 +130,18 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 			m.cursor = nextNonHeader(m.results, m.cursor, -1)
 		case "down", "j":
 			m.cursor = nextNonHeader(m.results, m.cursor, 1)
+		case "enter":
+			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
+				uri := m.results[m.cursor].uri
+				return m, func() tea.Msg {
+					err := m.client.AddToQueue(uri)
+					if err == nil {
+						// Also start playing if paused.
+						m.client.Play()
+					}
+					return controlActionMsg{feedback: "▶ Queued & playing", err: err}
+				}
+			}
 		case "/":
 			m.input.Focus()
 			return m, textinput.Blink
@@ -192,7 +205,7 @@ func (m SearchModel) View() string {
 		}
 	}
 
-	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate")
+	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: play")
 	return s
 }
 
@@ -206,6 +219,7 @@ func flattenResults(r *spotify.SearchResult) []searchResultItem {
 			items = append(items, searchResultItem{
 				label:    fmt.Sprintf("%s — %s", t.Name, t.ArtistNames()),
 				category: "Tracks",
+				uri:      t.URI,
 			})
 		}
 	}
@@ -215,6 +229,7 @@ func flattenResults(r *spotify.SearchResult) []searchResultItem {
 			items = append(items, searchResultItem{
 				label:    a.Name,
 				category: "Artists",
+				uri:      a.URI,
 			})
 		}
 	}
@@ -224,6 +239,7 @@ func flattenResults(r *spotify.SearchResult) []searchResultItem {
 			items = append(items, searchResultItem{
 				label:    a.Name,
 				category: "Albums",
+				uri:      a.URI,
 			})
 		}
 	}
@@ -233,6 +249,7 @@ func flattenResults(r *spotify.SearchResult) []searchResultItem {
 			items = append(items, searchResultItem{
 				label:    fmt.Sprintf("%s (%d tracks)", p.Name, p.Tracks.Total),
 				category: "Playlists",
+				uri:      p.URI,
 			})
 		}
 	}
