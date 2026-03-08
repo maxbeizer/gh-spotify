@@ -209,7 +209,11 @@ func (a App) renderPanel() string {
 
 func (a App) renderStatusBar() string {
 	status := fmt.Sprintf(" %s ", a.activeTab.String())
-	help := " space play/pause · n next · p prev · ? help "
+	help := " spc ▶⏸ · n ⏭ · p ⏮ · ? help "
+	// If terminal is too narrow, show minimal help.
+	if a.width < lipgloss.Width(status)+lipgloss.Width(help) {
+		help = " ? help "
+	}
 	gap := strings.Repeat(" ", max(0, a.width-lipgloss.Width(status)-lipgloss.Width(help)))
 	return a.theme.StatusBar.Width(a.width).Render(status + gap + help)
 }
