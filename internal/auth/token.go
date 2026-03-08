@@ -152,6 +152,7 @@ func AuthorizeURL(clientID, redirectURI, codeChallenge, state string) string {
 		"user-modify-playback-state",
 		"user-read-currently-playing",
 		"playlist-read-private",
+		"playlist-read-collaborative",
 		"user-library-read",
 	}
 
