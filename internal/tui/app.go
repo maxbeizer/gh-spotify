@@ -214,17 +214,14 @@ func (a App) renderPanel() string {
 func (a App) renderStatusBar() string {
 	status := fmt.Sprintf(" %s", a.activeTab.String())
 	help := "spc:play/pause n:next p:prev ?:help "
-	available := a.width - lipgloss.Width(status)
-	if available < lipgloss.Width(help) {
+	// Account for style padding (1 char each side).
+	usable := a.width - 2
+	if usable < lipgloss.Width(status)+lipgloss.Width(help) {
 		help = "?:help "
 	}
-	gap := max(0, a.width-lipgloss.Width(status)-lipgloss.Width(help))
+	gap := max(0, usable-lipgloss.Width(status)-lipgloss.Width(help))
 	line := status + strings.Repeat(" ", gap) + help
-	// Truncate to terminal width to prevent wrapping.
-	if lipgloss.Width(line) > a.width {
-		line = line[:a.width]
-	}
-	return a.theme.StatusBar.Render(line)
+	return a.theme.StatusBar.Width(a.width).Render(line)
 }
 
 func (a App) renderHelp() string {
