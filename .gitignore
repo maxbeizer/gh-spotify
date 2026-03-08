@@ -1,2 +1,23 @@
+# Build artifacts
 /gh-spotify
 /gh-spotify.exe
+/bin/
+
+# Test artifacts
+coverage.out
+
+# OS files
+.DS_Store
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Never commit secrets or tokens
+*.pem
+*.key
+token.json
+config.json
