@@ -45,11 +45,15 @@ func DefaultTheme() Theme {
 			Foreground(ColorSpotifyGreen).
 			Border(lipgloss.NormalBorder(), false, false, true, false).
 			BorderForeground(ColorSpotifyGreen).
-			Padding(0, 2),
+			Padding(0, 2).
+			MarginRight(1),
 
 		InactiveTab: lipgloss.NewStyle().
 			Foreground(ColorMutedText).
-			Padding(0, 2),
+			Border(lipgloss.NormalBorder(), false, false, true, false).
+			BorderForeground(ColorMediumGray).
+			Padding(0, 2).
+			MarginRight(1),
 
 		NowPlaying: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

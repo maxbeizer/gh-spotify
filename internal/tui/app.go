@@ -202,16 +202,26 @@ func (a App) renderPanel() string {
 
 func (a App) renderStatusBar() string {
 	status := fmt.Sprintf(" %s ", a.activeTab.String())
-	help := " ? help "
+	help := " space play/pause · n next · p prev · ? help "
 	gap := strings.Repeat(" ", max(0, a.width-lipgloss.Width(status)-lipgloss.Width(help)))
 	return a.theme.StatusBar.Width(a.width).Render(status + gap + help)
 }
 
 func (a App) renderHelp() string {
 	help := []string{
-		"tab / shift+tab  switch panels",
-		"q / ctrl+c       quit",
-		"?                toggle help",
+		"── Navigation ──────────────────────────",
+		"  tab / shift+tab   switch panels",
+		"  ?                 toggle this help",
+		"  q / ctrl+c        quit",
+		"",
+		"── Playback (works on any tab) ─────────",
+		"  space             play / pause",
+		"  n                 next track",
+		"  p                 previous track",
+		"  + / =             volume up",
+		"  -                 volume down",
+		"  s                 toggle shuffle",
+		"  r                 cycle repeat (off → all → track)",
 	}
 	return a.theme.HelpBar.Render(strings.Join(help, "\n"))
 }
