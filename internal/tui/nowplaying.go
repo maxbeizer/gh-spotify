@@ -107,12 +107,6 @@ func (m NowPlayingModel) View() string {
 	s := m.state
 	track := s.Item
 
-	// Play/pause indicator
-	playIcon := "▶"
-	if s.IsPlaying {
-		playIcon = "⏸"
-	}
-
 	// Shuffle & repeat indicators
 	shuffleIcon := "🔀 off"
 	if s.ShuffleState {
@@ -124,14 +118,15 @@ func (m NowPlayingModel) View() string {
 	// Progress bar
 	progressBar := m.renderProgress(s.ProgressMS, track.Duration)
 
+	// Track info lines — no play/pause icon here (it's in the controls bar).
 	lines := []string{
-		fmt.Sprintf("%s  %s", playIcon, track.Name),
-		fmt.Sprintf("   %s", track.ArtistNames()),
-		fmt.Sprintf("   %s", track.Album.Name),
+		track.Name,
+		track.ArtistNames(),
+		track.Album.Name,
 		"",
 		progressBar,
 		"",
-		fmt.Sprintf("   %s   %s   🔊 %d%%", shuffleIcon, repeatIcon, s.Device.VolumePercent),
+		fmt.Sprintf("%s   %s   🔊 %d%%", shuffleIcon, repeatIcon, s.Device.VolumePercent),
 	}
 
 	info := strings.Join(lines, "\n")
@@ -165,7 +160,7 @@ func (m NowPlayingModel) renderProgress(progressMS, durationMS int) string {
 	bar := m.theme.ProgressBar.Render(strings.Repeat("█", filled)) +
 		strings.Repeat("░", barWidth-filled)
 
-	return fmt.Sprintf("   %s %s / %s",
+	return fmt.Sprintf("%s %s / %s",
 		bar,
 		formatDuration(elapsed),
 		formatDuration(total),

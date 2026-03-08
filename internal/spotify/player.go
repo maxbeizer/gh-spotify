@@ -7,6 +7,17 @@ import (
 	"net/url"
 )
 
+// PlayContext starts playback of a context (playlist, album, artist URI).
+func (c *Client) PlayContext(contextURI string, shuffle bool) error {
+	if err := c.SetShuffle(shuffle); err != nil {
+		return err
+	}
+	body, _ := json.Marshal(map[string]any{
+		"context_uri": contextURI,
+	})
+	return c.Put("/me/player/play", bytes.NewReader(body))
+}
+
 // GetPlayerState returns the current playback state.
 func (c *Client) GetPlayerState() (*PlayerState, error) {
 	var state PlayerState
