@@ -10,10 +10,28 @@ gh extension install maxbeizer/gh-spotify
 
 ## Setup
 
-1. Create a Spotify app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
-2. Check **Web API** under "Which API/SDKs are you planning to use?"
-3. Set the redirect URI to `http://127.0.0.1:8818/callback`
-4. Run `gh spotify auth` and enter your Client ID
+### 1. Create a Spotify Developer App (free)
+
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) and log in
+2. Click **"Create app"**
+3. Fill in any name and description
+4. Under **Redirect URIs**, enter exactly:
+   ```
+   http://127.0.0.1:8818/callback
+   ```
+   > ⚠️ You must use `127.0.0.1`, **not** `localhost`. Spotify rejects `localhost` as insecure.
+5. Under **"Which API/SDKs are you planning to use?"**, check **Web API**
+6. Agree to the terms and click **Save**
+
+### 2. Authenticate
+
+```bash
+gh spotify auth
+```
+
+Paste your **Client ID** (found on your app's settings page) when prompted. The command will open your browser to authorize the app.
+
+> **Note:** Spotify Premium is required for playback control (play, pause, next, etc.). Free-tier accounts can use read-only commands like `now` and `devices`.
 
 ## Commands
 

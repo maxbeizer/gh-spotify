@@ -20,11 +20,21 @@ var authCmd = &cobra.Command{
 	Short: "Authenticate with Spotify",
 	Long: `Run the OAuth2 PKCE authentication flow to connect your Spotify account.
 
-You'll need a Spotify Client ID. Get one for free at:
-  https://developer.spotify.com/dashboard
+Before running this command, create a free Spotify app:
 
-When creating your app, set the redirect URI to:
-  http://127.0.0.1:8818/callback`,
+  1. Go to https://developer.spotify.com/dashboard
+  2. Click "Create app"
+  3. Enter any name and description
+  4. Under "Redirect URIs", enter exactly:
+       http://127.0.0.1:8818/callback
+     (Use 127.0.0.1, not "localhost" — Spotify rejects localhost as insecure)
+  5. Under "Which API/SDKs are you planning to use?", check "Web API"
+  6. Agree to the terms and click "Save"
+  7. Copy your Client ID from the app's settings page
+
+Then run 'gh spotify auth' and paste your Client ID when prompted.
+
+Note: Spotify Premium is required for playback control commands.`,
 	RunE: runAuth,
 }
 
@@ -40,9 +50,14 @@ func runAuth(cmd *cobra.Command, args []string) error {
 
 	if cfg.ClientID == "" {
 		fmt.Println("To authenticate, you need a Spotify Client ID.")
-		fmt.Println("Create one at: https://developer.spotify.com/dashboard")
-		fmt.Println("  • Check 'Web API' under API/SDKs")
-		fmt.Printf("  • Set redirect URI to: %s\n", auth.RedirectURI)
+		fmt.Println()
+		fmt.Println("If you haven't already, create a Spotify app:")
+		fmt.Println("  1. Go to https://developer.spotify.com/dashboard")
+		fmt.Println("  2. Click 'Create app'")
+		fmt.Printf("  3. Set redirect URI to: %s\n", auth.RedirectURI)
+		fmt.Println("     (Use 127.0.0.1, NOT localhost — Spotify rejects localhost)")
+		fmt.Println("  4. Check 'Web API' under API/SDKs")
+		fmt.Println("  5. Save, then copy your Client ID from settings")
 		fmt.Println()
 		fmt.Print("Enter your Spotify Client ID: ")
 		clientID, err := reader.ReadString('\n')
