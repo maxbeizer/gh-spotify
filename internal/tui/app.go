@@ -176,8 +176,15 @@ func (a App) renderTabBar() string {
 	return lipgloss.JoinHorizontal(lipgloss.Bottom, tabs...)
 }
 
+const helpHeight = 12 // lines used by the help overlay
+
 func (a App) renderPanel() string {
-	contentHeight := a.height - TabBarHeight - 2
+	statusBarHeight := 1
+	reserveForHelp := statusBarHeight
+	if a.showHelp {
+		reserveForHelp = helpHeight
+	}
+	contentHeight := a.height - TabBarHeight - reserveForHelp
 	if contentHeight < 1 {
 		contentHeight = 1
 	}
@@ -209,21 +216,18 @@ func (a App) renderStatusBar() string {
 
 func (a App) renderHelp() string {
 	help := []string{
-		"── Navigation ──────────────────────────",
-		"  tab / shift+tab   switch panels",
-		"  ?                 toggle this help",
-		"  q / ctrl+c        quit",
 		"",
-		"── Playback (works on any tab) ─────────",
-		"  space             play / pause",
-		"  n                 next track",
-		"  p                 previous track",
-		"  + / =             volume up",
-		"  -                 volume down",
-		"  s                 toggle shuffle",
-		"  r                 cycle repeat (off → all → track)",
+		"  Navigation                     Playback (any tab)",
+		"  ───────────                    ──────────────────",
+		"  tab/shift+tab  switch panels   space  play/pause",
+		"  ?              toggle help      n      next track",
+		"  q/ctrl+c       quit             p      prev track",
+		"                                  +/-    volume",
+		"                                  s      shuffle",
+		"                                  r      repeat",
+		"",
 	}
-	return a.theme.HelpBar.Render(strings.Join(help, "\n"))
+	return a.theme.HelpBar.Width(a.width).Render(strings.Join(help, "\n"))
 }
 
 // handleTabSwitch manages focus transitions between tabs.
