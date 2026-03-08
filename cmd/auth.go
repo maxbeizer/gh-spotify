@@ -23,8 +23,8 @@ var authCmd = &cobra.Command{
 You'll need a Spotify Client ID. Get one for free at:
   https://developer.spotify.com/dashboard
 
-When creating your app, set the redirect URI to http://127.0.0.1/callback
-(the port will be auto-configured).`,
+When creating your app, set the redirect URI to:
+  http://127.0.0.1:8818/callback`,
 	RunE: runAuth,
 }
 
@@ -41,6 +41,8 @@ func runAuth(cmd *cobra.Command, args []string) error {
 	if cfg.ClientID == "" {
 		fmt.Println("To authenticate, you need a Spotify Client ID.")
 		fmt.Println("Create one at: https://developer.spotify.com/dashboard")
+		fmt.Println("  • Check 'Web API' under API/SDKs")
+		fmt.Printf("  • Set redirect URI to: %s\n", auth.RedirectURI)
 		fmt.Println()
 		fmt.Print("Enter your Spotify Client ID: ")
 		clientID, err := reader.ReadString('\n')
@@ -72,8 +74,9 @@ func runAuth(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	_ = addr // server is running; we use the fixed RedirectURI
 
-	redirectURI := addr + "/callback"
+	redirectURI := auth.RedirectURI
 	cfg.RedirectURI = redirectURI
 
 	// Build auth URL and open browser.

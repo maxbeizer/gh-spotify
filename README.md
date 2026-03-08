@@ -11,8 +11,9 @@ gh extension install maxbeizer/gh-spotify
 ## Setup
 
 1. Create a Spotify app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
-2. Set the redirect URI to `http://127.0.0.1/callback`
-3. Run `gh spotify auth` and enter your Client ID
+2. Check **Web API** under "Which API/SDKs are you planning to use?"
+3. Set the redirect URI to `http://127.0.0.1:8818/callback`
+4. Run `gh spotify auth` and enter your Client ID
 
 ## Commands
 

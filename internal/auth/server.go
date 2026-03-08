@@ -14,11 +14,18 @@ type CallbackResult struct {
 	Err   error
 }
 
-// StartCallbackServer starts a localhost HTTP server on a random port and
-// waits for the OAuth callback. It returns the listener address and a channel
+// DefaultCallbackPort is the fixed port for the OAuth callback server.
+// Users register http://127.0.0.1:8818/callback in the Spotify dashboard.
+const DefaultCallbackPort = "8818"
+
+// RedirectURI is the full redirect URI to register in the Spotify dashboard.
+const RedirectURI = "http://127.0.0.1:" + DefaultCallbackPort + "/callback"
+
+// StartCallbackServer starts a localhost HTTP server on the fixed callback port
+// and waits for the OAuth callback. It returns the listener address and a channel
 // that will receive the callback result.
 func StartCallbackServer(ctx context.Context) (string, <-chan CallbackResult, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp", "127.0.0.1:"+DefaultCallbackPort)
 	if err != nil {
 		return "", nil, fmt.Errorf("starting callback server: %w", err)
 	}
