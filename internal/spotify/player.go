@@ -18,6 +18,14 @@ func (c *Client) PlayContext(contextURI string, shuffle bool) error {
 	return c.Put("/me/player/play", bytes.NewReader(body))
 }
 
+// PlayTrack starts playback of a specific track URI immediately.
+func (c *Client) PlayTrack(trackURI string) error {
+	body, _ := json.Marshal(map[string]any{
+		"uris": []string{trackURI},
+	})
+	return c.Put("/me/player/play", bytes.NewReader(body))
+}
+
 // GetPlayerState returns the current playback state.
 func (c *Client) GetPlayerState() (*PlayerState, error) {
 	var state PlayerState

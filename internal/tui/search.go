@@ -140,15 +140,24 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 		case "down", "j":
 			m.cursor = nextNonHeader(m.results, m.cursor, 1)
 		case "enter":
+			// Queue the selected item as next.
 			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
 				uri := m.results[m.cursor].uri
 				return m, func() tea.Msg {
 					err := m.client.AddToQueue(uri)
 					if err == nil {
-						// Also start playing if paused.
 						m.client.Play()
 					}
-					return controlActionMsg{feedback: "▶ Queued & playing", err: err}
+					return controlActionMsg{feedback: "➕ Queued next", err: err}
+				}
+			}
+		case "P":
+			// Play the selected item immediately.
+			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
+				uri := m.results[m.cursor].uri
+				return m, func() tea.Msg {
+					err := m.client.PlayTrack(uri)
+					return controlActionMsg{feedback: "▶ Playing now", err: err}
 				}
 			}
 		case "/":
@@ -214,7 +223,7 @@ func (m SearchModel) View() string {
 		}
 	}
 
-	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: play")
+	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: queue next  P: play now")
 	return s
 }
 
