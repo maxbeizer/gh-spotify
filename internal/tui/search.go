@@ -105,6 +105,7 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 		}
 		m.err = nil
 		m.results = flattenResults(msg.result)
+		m.input.Blur() // Ensure input is blurred so navigation keys work.
 		// Start cursor on first playable item, not a section header.
 		m.cursor = 0
 		if len(m.results) > 0 && m.results[0].label == "" {
