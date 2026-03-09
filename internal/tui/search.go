@@ -74,6 +74,11 @@ func (m *SearchModel) Blur() {
 	m.input.Blur()
 }
 
+// InputFocused reports whether the search text input has focus.
+func (m SearchModel) InputFocused() bool {
+	return m.input.Focused()
+}
+
 func (m SearchModel) doSearch(query string) tea.Cmd {
 	return func() tea.Msg {
 		result, err := m.client.Search(query, []string{"track", "artist", "album", "playlist"}, 10)
@@ -100,7 +105,11 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 		}
 		m.err = nil
 		m.results = flattenResults(msg.result)
+		// Start cursor on first playable item, not a section header.
 		m.cursor = 0
+		if len(m.results) > 0 && m.results[0].label == "" {
+			m.cursor = nextNonHeader(m.results, -1, 1)
+		}
 
 	case tea.KeyMsg:
 		if m.input.Focused() {

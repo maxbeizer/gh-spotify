@@ -109,19 +109,27 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Always route to now-playing and controls so they receive state updates.
+	// But skip controls key routing when the search input is focused,
+	// otherwise typing 'n', 'p', 's', etc. triggers playback actions.
 	var cmd tea.Cmd
 	a.nowPlaying, cmd = a.nowPlaying.Update(msg)
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
-	a.controls, cmd = a.controls.Update(msg)
-	if cmd != nil {
-		cmds = append(cmds, cmd)
+
+	searchHasFocus := a.activeTab == TabSearch && a.panels.Search.InputFocused()
+	_, isKey := msg.(tea.KeyMsg)
+	if isKey && searchHasFocus {
+		// Don't send key events to controls when typing in search.
+	} else {
+		a.controls, cmd = a.controls.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 
 	// Always route non-key messages to all panels (so async data loads land).
 	// Only route key messages to the active panel.
-	_, isKey := msg.(tea.KeyMsg)
 
 	if !isKey || a.activeTab == TabPlaylists {
 		a.panels.Playlists, cmd = a.panels.Playlists.Update(msg)
