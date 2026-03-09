@@ -11,7 +11,10 @@ import (
 	"github.com/maxbeizer/gh-spotify/internal/spotify"
 )
 
-const miniPollInterval = 4 * time.Second
+const (
+	miniArtWidth     = 8 // ~8 columns wide, ~4 rows tall (half-block chars double vertical res)
+	miniPollInterval = 4 * time.Second
+)
 
 // MiniPlayer is a compact now-playing display for small terminal windows.
 type MiniPlayer struct {
@@ -42,8 +45,6 @@ func (m MiniPlayer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Re-render art at new size.
-		m.artTrackID = ""
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -85,44 +86,35 @@ func (m MiniPlayer) View() string {
 	}
 
 	if m.err != nil {
-		return center(m.width, fmt.Sprintf("⚠ %s", m.err))
+		return fmt.Sprintf("⚠ %s", m.err)
 	}
 
 	if m.state == nil || m.state.Item == nil {
-		return center(m.width, "♫ Nothing playing")
+		return "♫ Nothing playing"
 	}
 
 	track := m.state.Item
-	var sections []string
 
-	// Album art, centered.
-	if m.artCache != "" {
-		sections = append(sections, m.artCache)
-	}
-
-	// Track info.
+	// Build the right side: title, artist, progress.
 	title := lipgloss.NewStyle().Bold(true).Foreground(ColorText).Render(track.Name)
 	artist := lipgloss.NewStyle().Foreground(ColorMutedText).Render(track.ArtistNames())
-	sections = append(sections, title)
-	sections = append(sections, artist)
 
-	// Progress bar.
-	sections = append(sections, m.renderProgress())
-
-	// Play state indicator.
-	icon := "▶"
+	icon := "▶ "
 	if m.state.IsPlaying {
-		icon = "⏸"
+		icon = "⏸ "
 	}
-	hint := lipgloss.NewStyle().Foreground(ColorMediumGray).Render(
-		fmt.Sprintf("%s  spc:play/pause n:next p:prev q:quit", icon),
+
+	info := lipgloss.JoinVertical(lipgloss.Left,
+		title,
+		artist,
+		icon+m.renderProgress(),
 	)
-	sections = append(sections, hint)
 
-	content := lipgloss.JoinVertical(lipgloss.Center, sections...)
-
-	// Center the whole thing vertically and horizontally.
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
+	// Join art (left) + info (right) horizontally.
+	if m.artCache != "" {
+		return lipgloss.JoinHorizontal(lipgloss.Top, m.artCache+"  ", info)
+	}
+	return info
 }
 
 func (m MiniPlayer) renderProgress() string {
@@ -133,11 +125,7 @@ func (m MiniPlayer) renderProgress() string {
 	elapsed := time.Duration(m.state.ProgressMS) * time.Millisecond
 	total := time.Duration(m.state.Item.Duration) * time.Millisecond
 
-	barWidth := min(m.width-16, 30)
-	if barWidth < 5 {
-		barWidth = 5
-	}
-
+	barWidth := 15
 	ratio := 0.0
 	if m.state.Item.Duration > 0 {
 		ratio = float64(m.state.ProgressMS) / float64(m.state.Item.Duration)
@@ -162,17 +150,11 @@ func (m MiniPlayer) renderArt(track *spotify.Track) tea.Cmd {
 	if len(images) == 0 {
 		return nil
 	}
-	imageURL := images[0].URL // largest
-	if len(images) > 1 {
-		imageURL = images[1].URL // medium
-	}
+	// Use smallest image for the tiny thumbnail.
+	imageURL := images[len(images)-1].URL
 	trackID := track.ID
-	artW := min(m.width-4, 30)
-	if artW < 8 {
-		artW = 8
-	}
 	return func() tea.Msg {
-		rendered, err := art.RenderFromURL(imageURL, artW)
+		rendered, err := art.RenderFromURL(imageURL, miniArtWidth)
 		if err != nil {
 			return artRenderedMsg{trackID: trackID, art: ""}
 		}
@@ -212,6 +194,4 @@ func (m MiniPlayer) doAction(fn func() error) tea.Cmd {
 	}
 }
 
-func center(width int, s string) string {
-	return lipgloss.PlaceHorizontal(width, lipgloss.Center, s)
-}
+
