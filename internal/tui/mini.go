@@ -11,10 +11,7 @@ import (
 	"github.com/maxbeizer/gh-spotify/internal/spotify"
 )
 
-const (
-	miniArtWidth     = 8 // ~8 columns wide, ~4 rows tall (half-block chars double vertical res)
-	miniPollInterval = 4 * time.Second
-)
+const miniPollInterval = 4 * time.Second
 
 // MiniPlayer is a compact now-playing display for small terminal windows.
 type MiniPlayer struct {
@@ -25,6 +22,7 @@ type MiniPlayer struct {
 	height     int
 	artCache   string
 	artTrackID string
+	artSize    int // current art width in columns
 }
 
 // NewMiniPlayer creates a new mini player.
@@ -45,6 +43,14 @@ func (m MiniPlayer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		newSize := m.calcArtSize()
+		if newSize != m.artSize {
+			m.artSize = newSize
+			m.artTrackID = "" // force re-render at new size
+			if m.state != nil && m.state.Item != nil {
+				return m, m.renderArt(m.state.Item)
+			}
+		}
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -80,6 +86,37 @@ func (m MiniPlayer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// calcArtSize computes art width based on terminal height.
+// Half-block chars render 2 pixels per row, so art height ≈ artWidth/2.
+// We want art + 3 lines of text to fit in the terminal.
+func (m MiniPlayer) calcArtSize() int {
+	if m.height <= 0 {
+		return 12
+	}
+	// Reserve 3 lines for text (title, artist, progress) + 2 for padding.
+	artRows := m.height - 5
+	if artRows < 2 {
+		artRows = 2
+	}
+	// Art width = artRows * 2 (each row is 2 pixels tall via half-blocks).
+	artW := artRows * 2
+	// Cap to something reasonable and don't exceed half the terminal width.
+	maxW := m.width/2 - 4
+	if maxW < 8 {
+		maxW = 8
+	}
+	if artW > maxW {
+		artW = maxW
+	}
+	if artW > 40 {
+		artW = 40
+	}
+	if artW < 8 {
+		artW = 8
+	}
+	return artW
+}
+
 func (m MiniPlayer) View() string {
 	if m.width == 0 {
 		return ""
@@ -90,7 +127,7 @@ func (m MiniPlayer) View() string {
 	}
 
 	if m.state == nil || m.state.Item == nil {
-		return "♫ Nothing playing"
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, "♫ Nothing playing")
 	}
 
 	track := m.state.Item
@@ -98,6 +135,7 @@ func (m MiniPlayer) View() string {
 	// Build the right side: title, artist, progress.
 	title := lipgloss.NewStyle().Bold(true).Foreground(ColorText).Render(track.Name)
 	artist := lipgloss.NewStyle().Foreground(ColorMutedText).Render(track.ArtistNames())
+	album := lipgloss.NewStyle().Foreground(ColorMediumGray).Italic(true).Render(track.Album.Name)
 
 	icon := "▶ "
 	if m.state.IsPlaying {
@@ -105,16 +143,25 @@ func (m MiniPlayer) View() string {
 	}
 
 	info := lipgloss.JoinVertical(lipgloss.Left,
+		"",
 		title,
 		artist,
+		album,
+		"",
 		icon+m.renderProgress(),
 	)
 
 	// Join art (left) + info (right) horizontally.
+	var content string
 	if m.artCache != "" {
-		return lipgloss.JoinHorizontal(lipgloss.Top, m.artCache+"  ", info)
+		content = lipgloss.JoinHorizontal(lipgloss.Top, m.artCache+"   ", info)
+	} else {
+		content = info
 	}
-	return info
+
+	// Pad and center vertically in the terminal.
+	padded := lipgloss.NewStyle().Padding(1, 2).Render(content)
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, padded)
 }
 
 func (m MiniPlayer) renderProgress() string {
@@ -150,11 +197,18 @@ func (m MiniPlayer) renderArt(track *spotify.Track) tea.Cmd {
 	if len(images) == 0 {
 		return nil
 	}
-	// Use smallest image for the tiny thumbnail.
+	// Use medium image for better quality; fall back to smallest.
 	imageURL := images[len(images)-1].URL
+	if len(images) > 1 {
+		imageURL = images[1].URL
+	}
 	trackID := track.ID
+	artW := m.artSize
+	if artW <= 0 {
+		artW = 12
+	}
 	return func() tea.Msg {
-		rendered, err := art.RenderFromURL(imageURL, miniArtWidth)
+		rendered, err := art.RenderFromURL(imageURL, artW)
 		if err != nil {
 			return artRenderedMsg{trackID: trackID, art: ""}
 		}
