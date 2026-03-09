@@ -262,13 +262,20 @@ func flattenResults(r *spotify.SearchResult) []searchResultItem {
 		}
 	}
 	if len(r.Playlists.Items) > 0 {
-		items = append(items, searchResultItem{category: fmt.Sprintf("Playlists (%d)", r.Playlists.Total)})
+		var playlistItems []searchResultItem
 		for _, p := range r.Playlists.Items {
-			items = append(items, searchResultItem{
+			if p.Name == "" || p.TrackCount() == 0 {
+				continue
+			}
+			playlistItems = append(playlistItems, searchResultItem{
 				label:    fmt.Sprintf("%s (%d tracks)", p.Name, p.TrackCount()),
 				category: "Playlists",
 				uri:      p.URI,
 			})
+		}
+		if len(playlistItems) > 0 {
+			items = append(items, searchResultItem{category: fmt.Sprintf("Playlists (%d)", len(playlistItems))})
+			items = append(items, playlistItems...)
 		}
 	}
 
