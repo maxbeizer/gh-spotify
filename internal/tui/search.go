@@ -2,12 +2,22 @@ package tui
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/maxbeizer/gh-spotify/internal/spotify"
 )
+
+// debugWriter is set by the app when --debug is enabled.
+var debugWriter io.Writer
+
+func searchDebugf(format string, args ...any) {
+	if debugWriter != nil {
+		fmt.Fprintf(debugWriter, format+"\n", args...)
+	}
+}
 
 // searchResultsMsg is sent when search results arrive.
 type searchResultsMsg struct {
@@ -118,6 +128,7 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
+		searchDebugf("[search] key=%q focused=%v cursor=%d results=%d", msg.String(), m.input.Focused(), m.cursor, len(m.results))
 		if m.input.Focused() {
 			switch msg.String() {
 			case "enter":
@@ -161,8 +172,10 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 			}
 		case "P":
 			// Play the selected item immediately (Shift+P).
+			searchDebugf("[search] P handler: cursor=%d hasURI=%v", m.cursor, m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "")
 			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
 				uri := m.results[m.cursor].uri
+				searchDebugf("[search] PlayTrack uri=%s", uri)
 				return m, func() tea.Msg {
 					err := m.client.PlayTrack(uri)
 					return controlActionMsg{feedback: "▶ Playing now", err: err}

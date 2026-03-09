@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -46,6 +47,7 @@ type App struct {
 	nowPlaying NowPlayingModel
 	controls   ControlsModel
 	panels     PanelSet
+	debugLog   io.Writer // nil unless --debug
 }
 
 // NewApp creates a new App model.
@@ -65,6 +67,18 @@ func NewApp() App {
 		nowPlaying: NewNowPlayingModel(client, theme),
 		controls:   NewControlsModel(client, theme),
 		panels:     NewPanelSet(client, theme),
+	}
+}
+
+// SetDebug enables debug logging to the given writer.
+func (a *App) SetDebug(w io.Writer) {
+	a.debugLog = w
+	debugWriter = w // also enable search panel debug logging
+}
+
+func (a App) debugf(format string, args ...any) {
+	if a.debugLog != nil {
+		fmt.Fprintf(a.debugLog, format+"\n", args...)
 	}
 }
 
@@ -92,6 +106,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.panels.SetSize(msg.Width, contentHeight)
 
 	case tea.KeyMsg:
+		a.debugf("[app] key=%q tab=%s searchFocused=%v searchHasResults=%v",
+			msg.String(), a.activeTab, a.panels.Search.InputFocused(), a.panels.Search.HasResults())
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return a, tea.Quit
