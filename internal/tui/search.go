@@ -151,8 +151,8 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 					return controlActionMsg{feedback: "➕ Queued next", err: err}
 				}
 			}
-		case "x":
-			// Play the selected item immediately.
+		case "P":
+			// Play the selected item immediately (Shift+P).
 			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
 				uri := m.results[m.cursor].uri
 				return m, func() tea.Msg {
@@ -223,7 +223,7 @@ func (m SearchModel) View() string {
 		}
 	}
 
-	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: queue next  x: play now")
+	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: queue next  P: play now")
 	return s
 }
 
