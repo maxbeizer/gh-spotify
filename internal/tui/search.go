@@ -159,26 +159,42 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 		case "down", "j":
 			m.cursor = nextNonHeader(m.results, m.cursor, 1)
 		case "enter":
-			// Queue the selected item as next.
+			// Queue the selected item as next (tracks only; playlists/albums play as context).
 			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
-				uri := m.results[m.cursor].uri
-				return m, func() tea.Msg {
-					err := m.client.AddToQueue(uri)
-					if err == nil {
-						m.client.Play()
+				item := m.results[m.cursor]
+				if isTrackURI(item.uri) {
+					uri := item.uri
+					return m, func() tea.Msg {
+						err := m.client.AddToQueue(uri)
+						if err == nil {
+							m.client.Play()
+						}
+						return controlActionMsg{feedback: "➕ Queued next", err: err}
 					}
-					return controlActionMsg{feedback: "➕ Queued next", err: err}
+				}
+				// For playlists/albums/artists, play as context.
+				uri := item.uri
+				return m, func() tea.Msg {
+					err := m.client.PlayContext(uri, false)
+					return controlActionMsg{feedback: "▶ Playing", err: err}
 				}
 			}
 		case "P":
 			// Play the selected item immediately (Shift+P).
-			searchDebugf("[search] P handler: cursor=%d hasURI=%v", m.cursor, m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "")
 			if m.cursor >= 0 && m.cursor < len(m.results) && m.results[m.cursor].uri != "" {
-				uri := m.results[m.cursor].uri
-				searchDebugf("[search] PlayTrack uri=%s", uri)
+				item := m.results[m.cursor]
+				if isTrackURI(item.uri) {
+					uri := item.uri
+					return m, func() tea.Msg {
+						err := m.client.PlayTrack(uri)
+						return controlActionMsg{feedback: "▶ Playing now", err: err}
+					}
+				}
+				// For playlists/albums/artists, shuffle play as context.
+				uri := item.uri
 				return m, func() tea.Msg {
-					err := m.client.PlayTrack(uri)
-					return controlActionMsg{feedback: "▶ Playing now", err: err}
+					err := m.client.PlayContext(uri, true)
+					return controlActionMsg{feedback: "🔀 Shuffle playing", err: err}
 				}
 			}
 		case "/":
@@ -244,8 +260,13 @@ func (m SearchModel) View() string {
 		}
 	}
 
-	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: queue next  P: play now")
+	s += "\n" + m.theme.HelpBar.Render("/: search  ↑↓: navigate  enter: play  P: shuffle play")
 	return s
+}
+
+// isTrackURI returns true if the URI is a Spotify track URI.
+func isTrackURI(uri string) bool {
+	return len(uri) > 14 && uri[:14] == "spotify:track:"
 }
 
 // flattenResults converts a SearchResult into a flat list with section headers.
