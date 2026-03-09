@@ -31,7 +31,8 @@ gh spotify auth
 
 Paste your **Client ID** (found on your app's settings page) when prompted. The command will open your browser to authorize the app.
 
-> **Note:** Spotify Premium is required for playback control (play, pause, next, etc.). Free-tier accounts can use read-only commands like `now` and `devices`.
+> [!NOTE]
+> Spotify Premium is required for playback control (play, pause, next, etc.). Free-tier accounts can use read-only commands like `now` and `devices`.
 
 ## Commands
 
@@ -62,3 +63,6 @@ Paste your **Client ID** (found on your app's settings page) when prompted. The 
 ## License
 
 MIT
+
+> [!IMPORTANT]
+> This project is not affiliated with Spotify. It uses the Spotify Web API under the terms of the [Spotify Developer Terms of Service](https://developer.spotify.com/terms/).
