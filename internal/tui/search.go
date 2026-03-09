@@ -79,6 +79,11 @@ func (m SearchModel) InputFocused() bool {
 	return m.input.Focused()
 }
 
+// HasResults reports whether the search has results to navigate.
+func (m SearchModel) HasResults() bool {
+	return len(m.results) > 0
+}
+
 func (m SearchModel) doSearch(query string) tea.Cmd {
 	return func() tea.Msg {
 		result, err := m.client.Search(query, []string{"track", "artist", "album", "playlist"}, 10)

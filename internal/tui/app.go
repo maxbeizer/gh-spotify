@@ -253,7 +253,7 @@ func (a *App) handleTabSwitch(from, to Tab) {
 	if from == TabSearch {
 		a.panels.Search.Blur()
 	}
-	if to == TabSearch {
+	if to == TabSearch && !a.panels.Search.HasResults() {
 		a.panels.Search.Focus()
 	}
 }
