@@ -134,7 +134,8 @@ func (m NowPlayingModel) View() string {
 	// Place album art to the left of track info when available.
 	var panel string
 	if m.artCache != "" {
-		panel = lipgloss.JoinHorizontal(lipgloss.Top, m.artCache+"  ", info)
+		artBlock := lipgloss.NewStyle().MarginRight(3).Render(m.artCache)
+		panel = lipgloss.JoinHorizontal(lipgloss.Center, artBlock, info)
 	} else {
 		panel = info
 	}
