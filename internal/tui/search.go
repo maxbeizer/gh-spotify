@@ -124,14 +124,16 @@ func (m SearchModel) Update(msg tea.Msg) (SearchModel, tea.Cmd) {
 				m.input.Blur()
 				return m, m.doSearch(q)
 			case "esc":
-				if len(m.results) > 0 {
-					m.input.Blur()
-				}
+				m.input.Blur()
 				return m, nil
+			case "up", "k", "down", "j", "P":
+				// Navigation/action keys: blur input and handle below.
+				m.input.Blur()
+			default:
+				var cmd tea.Cmd
+				m.input, cmd = m.input.Update(msg)
+				return m, cmd
 			}
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			return m, cmd
 		}
 
 		// Navigate results when input is blurred.
