@@ -151,10 +151,11 @@ func (m MiniPlayer) View() string {
 		icon+m.renderProgress(),
 	)
 
-	// Join art (left) + info (right) horizontally.
+	// Join art (left) + info (right) horizontally, vertically centered.
 	var content string
 	if m.artCache != "" {
-		content = lipgloss.JoinHorizontal(lipgloss.Top, m.artCache+"   ", info)
+		artBlock := lipgloss.NewStyle().MarginRight(3).Render(m.artCache)
+		content = lipgloss.JoinHorizontal(lipgloss.Center, artBlock, info)
 	} else {
 		content = info
 	}
