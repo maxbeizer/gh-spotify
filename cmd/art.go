@@ -41,7 +41,7 @@ var artCmd = &cobra.Command{
 			return fmt.Errorf("rendering album art: %w", err)
 		}
 
-		fmt.Print(rendered)
+		fmt.Println(rendered)
 		fmt.Printf("\n%s — %s\n", track.Name, track.ArtistNames())
 		fmt.Printf("%s\n", track.Album.Name)
 

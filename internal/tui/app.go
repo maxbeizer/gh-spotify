@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/maxbeizer/gh-spotify/internal/spotify"
 )
 
@@ -220,7 +221,11 @@ func (a App) renderPanel() string {
 	var content string
 	switch a.activeTab {
 	case TabNowPlaying:
-		content = a.nowPlaying.View() + "\n" + a.controls.View()
+		// Anchor the player to the bottom so it stays compact at any height.
+		controls := ansi.Truncate(a.controls.View(), a.width, "…")
+		card := a.nowPlaying.View(a.width, contentHeight-lipgloss.Height(controls))
+		content = lipgloss.JoinVertical(lipgloss.Left, card, controls)
+		return lipgloss.Place(a.width, contentHeight, lipgloss.Left, lipgloss.Bottom, content)
 	case TabPlaylists:
 		content = a.panels.Playlists.View()
 	case TabSearch:
