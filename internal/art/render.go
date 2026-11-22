@@ -30,10 +30,12 @@ func RenderFromURL(imageURL string, width int) (string, error) {
 	return RenderFromImage(img, width), nil
 }
 
-// RenderFromImage converts an image.Image to colored ASCII art using half-block
-// characters. Each output character cell encodes two vertical pixels: the top
-// pixel as the foreground (▄ lower-half block) and the bottom pixel as the
-// background, yielding double vertical resolution.
+// RenderFromImage converts an image.Image to colored block art. Each output
+// cell is a full block (█) colored with the average of the source pixels it
+// covers. Only the foreground color is used: some terminals and multiplexers
+// drop truecolor backgrounds, which made half-block rendering show dark bands.
+// Rows assume terminal cells are roughly twice as tall as wide. The result has
+// no trailing newline so it composes cleanly with lipgloss layouts.
 func RenderFromImage(img image.Image, width int) string {
 	bounds := img.Bounds()
 	srcW := bounds.Dx()
@@ -43,45 +45,52 @@ func RenderFromImage(img image.Image, width int) string {
 		return ""
 	}
 
-	// Terminal characters are roughly twice as tall as wide, so each character
-	// cell represents 2 vertical pixels via the half-block technique.
 	height := (width * srcH) / (srcW * 2)
 	if height < 1 {
 		height = 1
 	}
-	// Ensure even row count so we can pair rows for half-block rendering.
-	pixelRows := height * 2
 
-	var buf strings.Builder
-	for row := 0; row < pixelRows; row += 2 {
+	rows := make([]string, height)
+	for row := 0; row < height; row++ {
+		var buf strings.Builder
 		for col := 0; col < width; col++ {
-			topColor := sampleColor(img, bounds, srcW, srcH, col, row, width, pixelRows)
-			botColor := sampleColor(img, bounds, srcW, srcH, col, row+1, width, pixelRows)
-
-			// Use "▄" (lower half block): foreground = bottom pixel, background = top pixel.
-			tr, tg, tb := topColor.R, topColor.G, topColor.B
-			br, bg, bb := botColor.R, botColor.G, botColor.B
-			buf.WriteString(fmt.Sprintf("\033[48;2;%d;%d;%dm\033[38;2;%d;%d;%dm▄",
-				tr, tg, tb, br, bg, bb))
+			c := averageColor(img, bounds, col, row, width, height)
+			fmt.Fprintf(&buf, "\033[38;2;%d;%d;%dm█", c.R, c.G, c.B)
 		}
-		buf.WriteString("\033[0m\n")
+		buf.WriteString("\033[0m")
+		rows[row] = buf.String()
 	}
 
-	return buf.String()
+	return strings.Join(rows, "\n")
 }
 
-// sampleColor maps a cell coordinate in the output grid to the source image
-// and returns the pixel color at that position.
-func sampleColor(img image.Image, bounds image.Rectangle, srcW, srcH, col, row, outW, outH int) color.RGBA {
-	sx := bounds.Min.X + (col*srcW)/outW
-	sy := bounds.Min.Y + (row*srcH)/outH
-	if sx >= bounds.Max.X {
-		sx = bounds.Max.X - 1
+// averageColor returns the mean color of the source region covered by output
+// cell (col, row) in an outW x outH grid.
+func averageColor(img image.Image, bounds image.Rectangle, col, row, outW, outH int) color.RGBA {
+	srcW, srcH := bounds.Dx(), bounds.Dy()
+	x0 := bounds.Min.X + col*srcW/outW
+	x1 := bounds.Min.X + (col+1)*srcW/outW
+	y0 := bounds.Min.Y + row*srcH/outH
+	y1 := bounds.Min.Y + (row+1)*srcH/outH
+	if x1 <= x0 {
+		x1 = x0 + 1
 	}
-	if sy >= bounds.Max.Y {
-		sy = bounds.Max.Y - 1
+	if y1 <= y0 {
+		y1 = y0 + 1
 	}
 
-	r, g, b, _ := img.At(sx, sy).RGBA()
-	return color.RGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 255}
+	var rs, gs, bs, n uint64
+	for y := y0; y < y1 && y < bounds.Max.Y; y++ {
+		for x := x0; x < x1 && x < bounds.Max.X; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			rs += uint64(r >> 8)
+			gs += uint64(g >> 8)
+			bs += uint64(b >> 8)
+			n++
+		}
+	}
+	if n == 0 {
+		return color.RGBA{A: 255}
+	}
+	return color.RGBA{R: uint8(rs / n), G: uint8(gs / n), B: uint8(bs / n), A: 255}
 }

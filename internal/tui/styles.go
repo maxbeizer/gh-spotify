@@ -58,7 +58,7 @@ func DefaultTheme() Theme {
 		NowPlaying: lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(ColorSpotifyGreen).
-			Padding(1, 2),
+			Padding(0, 1),
 
 		ProgressBar: lipgloss.NewStyle().
 			Foreground(ColorSpotifyGreen),

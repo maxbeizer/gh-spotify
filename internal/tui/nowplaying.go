@@ -7,13 +7,20 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/maxbeizer/gh-spotify/internal/art"
 	"github.com/maxbeizer/gh-spotify/internal/spotify"
 )
 
 const (
 	pollInterval = 4 * time.Second
-	artWidth     = 22
+
+	// artWidth is in columns; the art is artWidth/2 rows tall, matching the
+	// five info lines next to it.
+	artWidth = 10
+	artGap   = 2
+	// minInfoWidth is the narrowest info column worth showing art beside.
+	minInfoWidth = 20
 )
 
 // artRenderedMsg carries the result of async album art rendering.
@@ -34,7 +41,6 @@ type NowPlayingModel struct {
 	state      *spotify.PlayerState
 	err        error
 	theme      Theme
-	width      int
 	artCache   string // rendered ASCII art
 	artTrackID string // track ID the cached art corresponds to
 }
@@ -56,9 +62,6 @@ func (m NowPlayingModel) Init() tea.Cmd {
 
 func (m NowPlayingModel) Update(msg tea.Msg) (NowPlayingModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-
 	case playerStateMsg:
 		m.state = msg.state
 		m.err = msg.err
@@ -91,81 +94,107 @@ func (m NowPlayingModel) Update(msg tea.Msg) (NowPlayingModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m NowPlayingModel) View() string {
-	if m.client == nil {
-		return m.theme.NowPlaying.Render("⚠  Not authenticated\n\nRun `gh spotify auth` to connect your Spotify account.")
+// View renders the now-playing card to fit within width x height cells. As
+// space shrinks it drops the border, then the album art, then lines of text.
+func (m NowPlayingModel) View(width, height int) string {
+	if width <= 0 || height <= 0 {
+		return ""
 	}
 
-	if m.err != nil {
-		return m.theme.NowPlaying.Render(fmt.Sprintf("⚠  Error fetching playback:\n%s", m.err))
+	var lines []string
+	showArt := false
+	switch {
+	case m.client == nil:
+		lines = []string{"⚠  Not authenticated", "Run `gh spotify auth` to connect your Spotify account."}
+	case m.err != nil:
+		lines = []string{"⚠  Error fetching playback:", m.err.Error()}
+	case m.state == nil || m.state.Item == nil:
+		lines = []string{"♫ Nothing is playing", "Start playback in Spotify or run `gh spotify play`."}
+	default:
+		showArt = m.artCache != ""
 	}
 
-	if m.state == nil || m.state.Item == nil {
-		return m.theme.NowPlaying.Render("♫ Nothing is playing\n\nStart playback in Spotify or run `gh spotify play`.")
+	const borderW, borderH, padW = 2, 2, 2
+	bordered := height >= artWidth/2+borderH && width > borderW+padW+minInfoWidth
+	innerW := width
+	if bordered {
+		innerW = width - borderW - padW
+	}
+	innerH := height
+	if bordered {
+		innerH = height - borderH
 	}
 
-	s := m.state
-	track := s.Item
-
-	// Shuffle & repeat indicators
-	shuffleIcon := "🔀 off"
-	if s.ShuffleState {
-		shuffleIcon = "🔀 on"
+	if showArt && (innerH < artWidth/2 || innerW < artWidth+artGap+minInfoWidth) {
+		showArt = false
+	}
+	infoW := innerW
+	if showArt {
+		infoW = innerW - artWidth - artGap
 	}
 
-	repeatIcon := "🔁 " + s.RepeatState
-
-	// Progress bar
-	progressBar := m.renderProgress(s.ProgressMS, track.Duration)
-
-	// Track info lines — no play/pause icon here (it's in the controls bar).
-	lines := []string{
-		track.Name,
-		track.ArtistNames(),
-		track.Album.Name,
-		"",
-		progressBar,
-		"",
-		fmt.Sprintf("%s   %s   🔊 %d%%", shuffleIcon, repeatIcon, s.Device.VolumePercent),
+	if lines == nil {
+		lines = m.trackLines(infoW, innerH)
+	}
+	if len(lines) > innerH {
+		lines = lines[:innerH]
+	}
+	for i, l := range lines {
+		lines[i] = ansi.Truncate(l, infoW, "…")
 	}
 
-	info := strings.Join(lines, "\n")
-
-	// Place album art to the left of track info when available.
-	var panel string
-	if m.artCache != "" {
-		artBlock := lipgloss.NewStyle().MarginRight(3).Render(m.artCache)
-		panel = lipgloss.JoinHorizontal(lipgloss.Center, artBlock, info)
-	} else {
-		panel = info
+	body := strings.Join(lines, "\n")
+	if showArt {
+		artBlock := lipgloss.NewStyle().MarginRight(artGap).Render(m.artCache)
+		body = lipgloss.JoinHorizontal(lipgloss.Center, artBlock, body)
 	}
 
-	return m.theme.NowPlaying.Render(panel)
+	if !bordered {
+		return body
+	}
+	return m.theme.NowPlaying.Width(width - borderW).Render(body)
 }
 
-func (m NowPlayingModel) renderProgress(progressMS, durationMS int) string {
+// trackLines returns the info lines for the current track, most important
+// first so callers can trim from the end when space is tight.
+func (m NowPlayingModel) trackLines(width, height int) []string {
+	track := m.state.Item
+	title := lipgloss.NewStyle().Bold(true).Foreground(ColorText).Render(track.Name)
+	progress := m.renderProgress(m.state.ProgressMS, track.Duration, width)
+
+	if height < 5 {
+		// Too short for the full layout: keep the title, progress, and artist.
+		return []string{title, progress, track.ArtistNames()}
+	}
+	return []string{
+		title,
+		track.ArtistNames(),
+		lipgloss.NewStyle().Foreground(ColorMutedText).Render(track.Album.Name),
+		"",
+		progress,
+	}
+}
+
+func (m NowPlayingModel) renderProgress(progressMS, durationMS, width int) string {
 	elapsed := time.Duration(progressMS) * time.Millisecond
 	total := time.Duration(durationMS) * time.Millisecond
+	times := fmt.Sprintf(" %s / %s", formatDuration(elapsed), formatDuration(total))
+
+	barWidth := min(40, width-lipgloss.Width(times))
+	if barWidth < 5 {
+		return strings.TrimSpace(times)
+	}
 
 	ratio := 0.0
 	if durationMS > 0 {
 		ratio = float64(progressMS) / float64(durationMS)
 	}
-
-	barWidth := 30
-	filled := int(ratio * float64(barWidth))
-	if filled > barWidth {
-		filled = barWidth
-	}
+	filled := min(barWidth, int(ratio*float64(barWidth)))
 
 	bar := m.theme.ProgressBar.Render(strings.Repeat("█", filled)) +
 		strings.Repeat("░", barWidth-filled)
 
-	return fmt.Sprintf("%s %s / %s",
-		bar,
-		formatDuration(elapsed),
-		formatDuration(total),
-	)
+	return bar + times
 }
 
 func formatDuration(d time.Duration) string {
